@@ -1,0 +1,89 @@
+{
+  "$schema": "./packages/core/schema/flowstacks.schema.json",
+  "tenantId": "local",
+  "projectId": "example-todo",
+  "name": "example-todo",
+  "repository": "https://github.com/anirban1809/example-todo",
+  "environments": [
+    "staging",
+    "production"
+  ],
+  "featureEnvironments": true,
+  "framework": "nextjs",
+  "defaultRoutePolicy": {
+    "auth": "cognito",
+    "rateLimitPolicy": "standard"
+  },
+  "routes": {
+    "GET /api/config": {
+      "auth": "public",
+      "rateLimitPolicy": "standard"
+    }
+  },
+  "rateLimitPolicies": {
+    "standard": {
+      "anonymous": {
+        "rate": [
+          {
+            "scope": "ip",
+            "requests": 30,
+            "windowSeconds": 60
+          },
+          {
+            "scope": "global",
+            "requests": 300,
+            "windowSeconds": 60
+          }
+        ],
+        "quota": {
+          "scope": "global",
+          "requests": 10000,
+          "period": "month"
+        },
+        "concurrency": 5
+      },
+      "tiers": {
+        "free": {
+          "rate": [
+            {
+              "scope": "user",
+              "requests": 60,
+              "windowSeconds": 60
+            },
+            {
+              "scope": "tenant",
+              "requests": 300,
+              "windowSeconds": 60
+            }
+          ],
+          "quota": {
+            "scope": "tenant",
+            "requests": 25000,
+            "period": "month"
+          },
+          "concurrency": 10
+        },
+        "paid": {
+          "rate": [
+            {
+              "scope": "user",
+              "requests": 600,
+              "windowSeconds": 60
+            },
+            {
+              "scope": "tenant",
+              "requests": 3000,
+              "windowSeconds": 60
+            }
+          ],
+          "quota": {
+            "scope": "tenant",
+            "requests": 1000000,
+            "period": "month"
+          },
+          "concurrency": 100
+        }
+      }
+    }
+  }
+}

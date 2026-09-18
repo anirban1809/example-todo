@@ -1,0 +1,20 @@
+{
+  "name": "@flowstacks/application-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.883.0",
+    "@aws-sdk/lib-dynamodb": "^3.883.0",
+    "@flowstacks/core": "*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": { "@types/node": "^24.3.0", "typescript": "^5.9.2" }
+}

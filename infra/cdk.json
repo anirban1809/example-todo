@@ -1,0 +1,4 @@
+{
+  "app": "npx tsx src/app.ts",
+  "watch": { "include": ["../infra/**", "../api/**", "../app/**", "../src/**", "../packages/**", "../flowstacks.json"] }
+}

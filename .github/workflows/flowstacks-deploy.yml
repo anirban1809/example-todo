@@ -1,0 +1,80 @@
+name: Deploy with Flowstacks
+# FLOWSTACKS_ENVIRONMENTS_V1: immutable source checkout and isolated feature environments.
+run-name: Deploy ${{ inputs.tenantId || 'repository' }}/${{ inputs.projectId || 'project' }} to ${{ inputs.environment || 'development' }} · ${{ inputs.deploymentId || github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenantId:
+        description: Tenant expected by the control plane
+        required: true
+        type: string
+      projectId:
+        description: Project expected by the control plane
+        required: true
+        type: string
+      environment:
+        description: Environment to deploy
+        required: true
+        type: string
+      deploymentId:
+        description: Control-plane deployment ID
+        required: true
+        type: string
+      sourceRef:
+        description: Exact commit selected by the control plane
+        required: true
+        type: string
+      deployRoleArn:
+        description: Repository-scoped AWS deployment role
+        required: true
+        type: string
+      awsRegion:
+        description: AWS region selected by Flowstacks
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: flowstacks-${{ inputs.environment || 'development' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sourceRef }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify repository identity
+        env:
+          EXPECTED_TENANT_ID: ${{ inputs.tenantId }}
+          EXPECTED_PROJECT_ID: ${{ inputs.projectId }}
+          ENVIRONMENT: ${{ inputs.environment || 'development' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const config = JSON.parse(readFileSync('flowstacks.json', 'utf8'));
+          if (process.env.EXPECTED_TENANT_ID && config.tenantId !== process.env.EXPECTED_TENANT_ID) throw new Error('Tenant identity mismatch');
+          if (process.env.EXPECTED_PROJECT_ID && config.projectId !== process.env.EXPECTED_PROJECT_ID) throw new Error('Project identity mismatch');
+          const feature = /^feature-[a-f0-9]{16}$/.test(process.env.ENVIRONMENT);
+          if (feature ? config.featureEnvironments !== true : !config.environments.includes(process.env.ENVIRONMENT)) throw new Error('Environment is not enabled in flowstacks.json');
+          NODE
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.deployRoleArn || vars.FLOWSTACKS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ inputs.awsRegion || vars.FLOWSTACKS_AWS_REGION }}
+      - name: Deploy application infrastructure and frontend
+        env:
+          ENVIRONMENT: ${{ inputs.environment || 'development' }}
+        run: cd infra && npx cdk deploy --all --require-approval never
